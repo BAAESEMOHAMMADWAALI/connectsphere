@@ -1,0 +1,13 @@
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+target/
+out/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.mvn/wrapper/maven-wrapper.jar
+
