@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -67,6 +68,26 @@ public class FollowService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public long getFollowersCount(String userId) {
+        return followRelationRepository.countByFolloweeUserId(parseUuid(userId, "user id"));
+    }
+
+    @Transactional(readOnly = true)
+    public long getFollowingCount(String userId) {
+        return followRelationRepository.countByFollowerUserId(parseUuid(userId, "user id"));
+    }
+
+    public String resolveFolloweeId(String followingId, String followeeId) {
+        if (StringUtils.hasText(followingId)) {
+            return followingId.trim();
+        }
+        if (StringUtils.hasText(followeeId)) {
+            return followeeId.trim();
+        }
+        throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing following user id");
+    }
+
     private FollowResponse mapToResponse(FollowRelation followRelation) {
         return new FollowResponse(
                 followRelation.getFollowerUserId().toString(),
@@ -76,6 +97,9 @@ public class FollowService {
     }
 
     private UUID parseUuid(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing " + fieldName);
+        }
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException exception) {
@@ -83,4 +107,3 @@ public class FollowService {
         }
     }
 }
-

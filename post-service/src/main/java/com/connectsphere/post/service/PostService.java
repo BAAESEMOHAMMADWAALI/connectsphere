@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -41,10 +42,11 @@ public class PostService {
 
     @Transactional
     public PostResponse createPost(String authorUserId, CreatePostRequest request) {
+        String effectiveAuthorUserId = StringUtils.hasText(authorUserId) ? authorUserId : request.userId();
         PostEntity postEntity = new PostEntity();
-        postEntity.setAuthorUserId(parseUuid(authorUserId, "author user id"));
-        postEntity.setCaption(request.caption().trim());
-        postEntity.setMediaUrl(request.mediaUrl().trim());
+        postEntity.setAuthorUserId(parseUuid(effectiveAuthorUserId, "author user id"));
+        postEntity.setCaption(request.normalizedCaption());
+        postEntity.setMediaUrl(request.resolvedMediaUrl());
 
         PostEntity savedPost = postRepository.save(postEntity);
         postEventPublisher.publishPostCreated(savedPost);
@@ -57,6 +59,23 @@ public class PostService {
     }
 
     @Transactional(readOnly = true)
+    public List<PostResponse> getAllPosts(int limit) {
+        return postRepository.findAllByOrderByCreatedAtDesc(PageRequest.of(0, normalizeLimit(limit))).stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public List<PostResponse> getPostsByUser(String authorUserId, int limit) {
+        return postRepository.findByAuthorUserIdOrderByCreatedAtDesc(
+                        parseUuid(authorUserId, "author user id"),
+                        PageRequest.of(0, normalizeLimit(limit))
+                ).stream()
+                .map(this::mapToResponse)
+                .toList();
+    }
+
+    @Transactional(readOnly = true)
     public List<PostResponse> getPostsByAuthors(List<String> authorIds, int limit) {
         if (authorIds == null || authorIds.isEmpty()) {
             return Collections.emptyList();
@@ -66,7 +85,7 @@ public class PostService {
                 .map(authorId -> parseUuid(authorId, "author id"))
                 .toList();
 
-        return postRepository.findByAuthorUserIdInOrderByCreatedAtDesc(authorUserIds, PageRequest.of(0, limit)).stream()
+        return postRepository.findByAuthorUserIdInOrderByCreatedAtDesc(authorUserIds, PageRequest.of(0, normalizeLimit(limit))).stream()
                 .map(this::mapToResponse)
                 .toList();
     }
@@ -101,17 +120,42 @@ public class PostService {
         return mapToResponse(postEntity);
     }
 
+    @Transactional
+    public void deletePost(String postId, String actorUserId) {
+        PostEntity postEntity = findPost(postId);
+        if (StringUtils.hasText(actorUserId)) {
+            UUID actorId = parseUuid(actorUserId, "actor user id");
+            if (!postEntity.getAuthorUserId().equals(actorId)) {
+                throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Only the post owner can delete this post");
+            }
+        }
+
+        postLikeRepository.deleteByPostId(postEntity.getId());
+        postCommentRepository.deleteByPostId(postEntity.getId());
+        postRepository.delete(postEntity);
+    }
+
     private PostEntity findPost(String postId) {
         return postRepository.findById(parseUuid(postId, "post id"))
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Post not found"));
     }
 
     private UUID parseUuid(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing " + fieldName);
+        }
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException exception) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Invalid " + fieldName, exception);
         }
+    }
+
+    private int normalizeLimit(int limit) {
+        if (limit < 1) {
+            return 20;
+        }
+        return Math.min(limit, 100);
     }
 
     private PostResponse mapToResponse(PostEntity postEntity) {
@@ -129,6 +173,7 @@ public class PostService {
                 postEntity.getAuthorUserId().toString(),
                 postEntity.getCaption(),
                 postEntity.getMediaUrl(),
+                postEntity.getMediaUrl(),
                 postEntity.getCreatedAt(),
                 postLikeRepository.countByPostId(postEntity.getId()),
                 postCommentRepository.countByPostId(postEntity.getId()),
@@ -136,4 +181,3 @@ public class PostService {
         );
     }
 }
-

@@ -11,8 +11,11 @@ public interface FollowRelationRepository extends JpaRepository<FollowRelation, 
 
     void deleteByFollowerUserIdAndFolloweeUserId(UUID followerUserId, UUID followeeUserId);
 
+    long countByFolloweeUserId(UUID followeeUserId);
+
+    long countByFollowerUserId(UUID followerUserId);
+
     List<FollowRelation> findByFollowerUserIdOrderByCreatedAtDesc(UUID followerUserId);
 
     List<FollowRelation> findByFolloweeUserIdOrderByCreatedAtDesc(UUID followeeUserId);
 }
-

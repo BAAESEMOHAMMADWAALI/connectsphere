@@ -10,5 +10,6 @@ public interface PostCommentRepository extends JpaRepository<PostCommentEntity, 
     long countByPostId(UUID postId);
 
     List<PostCommentEntity> findTop20ByPostIdOrderByCreatedAtDesc(UUID postId);
-}
 
+    void deleteByPostId(UUID postId);
+}

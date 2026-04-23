@@ -9,11 +9,15 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.time.Instant;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.kafka.core.KafkaTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 public class PostEventPublisher {
+
+    private static final Logger log = LoggerFactory.getLogger(PostEventPublisher.class);
 
     private final KafkaTemplate<String, String> kafkaTemplate;
     private final ObjectMapper objectMapper;
@@ -55,10 +59,16 @@ public class PostEventPublisher {
 
     private void publish(String topic, String key, Object payload) {
         try {
-            kafkaTemplate.send(topic, key, objectMapper.writeValueAsString(payload));
+            kafkaTemplate.send(topic, key, objectMapper.writeValueAsString(payload))
+                    .whenComplete((result, exception) -> {
+                        if (exception != null) {
+                            log.warn("Kafka event could not be published to topic {} with key {}", topic, key, exception);
+                        }
+                    });
         } catch (JsonProcessingException exception) {
             throw new IllegalStateException("Unable to serialize Kafka event", exception);
+        } catch (RuntimeException exception) {
+            log.warn("Kafka event publish was skipped for topic {} with key {}", topic, key, exception);
         }
     }
 }
-

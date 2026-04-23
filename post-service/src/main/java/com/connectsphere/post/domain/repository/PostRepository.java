@@ -10,5 +10,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 public interface PostRepository extends JpaRepository<PostEntity, UUID> {
 
     List<PostEntity> findByAuthorUserIdInOrderByCreatedAtDesc(Collection<UUID> authorUserIds, Pageable pageable);
-}
 
+    List<PostEntity> findByAuthorUserIdOrderByCreatedAtDesc(UUID authorUserId, Pageable pageable);
+
+    List<PostEntity> findAllByOrderByCreatedAtDesc(Pageable pageable);
+}
