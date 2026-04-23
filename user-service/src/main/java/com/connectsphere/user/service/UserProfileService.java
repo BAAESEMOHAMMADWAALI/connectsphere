@@ -7,11 +7,13 @@ import com.connectsphere.user.api.dto.UpdateProfileRequest;
 import com.connectsphere.user.api.dto.UserProfileResponse;
 import com.connectsphere.user.domain.entity.UserAccount;
 import com.connectsphere.user.domain.repository.UserAccountRepository;
+import java.util.Locale;
 import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -36,20 +38,23 @@ public class UserProfileService {
 
     @Transactional
     public TokenResponse register(RegisterRequest request) {
-        if (userAccountRepository.existsByEmailIgnoreCase(request.email())) {
+        String normalizedEmail = request.email().trim().toLowerCase(Locale.ROOT);
+        if (userAccountRepository.existsByEmailIgnoreCase(normalizedEmail)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Email is already registered");
         }
 
         UserAccount userAccount = new UserAccount();
-        userAccount.setEmail(request.email().trim().toLowerCase());
-        userAccount.setDisplayName(request.displayName().trim());
+        userAccount.setEmail(normalizedEmail);
+        userAccount.setDisplayName(request.resolvedFullName());
         userAccount.setPasswordHash(passwordEncoder.encode(request.password()));
-        userAccount.setBio("");
+        userAccount.setRole("USER");
+        userAccount.setProfileImageUrl(request.normalizedProfileImageUrl());
+        userAccount.setBio(request.normalizedBio());
 
         UserAccount savedUser = userAccountRepository.save(userAccount);
         userEventPublisher.publishUserRegistered(savedUser);
 
-        return new TokenResponse(savedUser.getId().toString(), tokenService.issueToken(savedUser), "Bearer");
+        return TokenResponse.bearer(savedUser.getId().toString(), tokenService.issueToken(savedUser), resolveRole(savedUser));
     }
 
     @Transactional(readOnly = true)
@@ -61,7 +66,7 @@ public class UserProfileService {
             throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Invalid email or password");
         }
 
-        return new TokenResponse(userAccount.getId().toString(), tokenService.issueToken(userAccount), "Bearer");
+        return TokenResponse.bearer(userAccount.getId().toString(), tokenService.issueToken(userAccount), resolveRole(userAccount));
     }
 
     @Transactional(readOnly = true)
@@ -72,8 +77,9 @@ public class UserProfileService {
     @Transactional
     public UserProfileResponse updateProfile(String userId, UpdateProfileRequest request) {
         UserAccount userAccount = findById(userId);
-        userAccount.setDisplayName(request.displayName().trim());
-        userAccount.setBio(request.bio() == null ? "" : request.bio().trim());
+        userAccount.setDisplayName(request.resolvedFullName());
+        userAccount.setBio(request.normalizedBio());
+        userAccount.setProfileImageUrl(request.normalizedProfileImageUrl());
         return mapToResponse(userAccount);
     }
 
@@ -91,9 +97,15 @@ public class UserProfileService {
                 userAccount.getId().toString(),
                 userAccount.getEmail(),
                 userAccount.getDisplayName(),
-                userAccount.getBio(),
+                userAccount.getDisplayName(),
+                userAccount.getProfileImageUrl() == null ? "" : userAccount.getProfileImageUrl(),
+                userAccount.getBio() == null ? "" : userAccount.getBio(),
+                resolveRole(userAccount),
                 userAccount.getCreatedAt()
         );
     }
-}
 
+    private String resolveRole(UserAccount userAccount) {
+        return StringUtils.hasText(userAccount.getRole()) ? userAccount.getRole() : "USER";
+    }
+}

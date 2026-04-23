@@ -24,6 +24,12 @@ public class UserAccount {
     @Column(nullable = false)
     private String passwordHash;
 
+    @Column(length = 30)
+    private String role;
+
+    @Column(length = 500)
+    private String profileImageUrl;
+
     @Column(length = 280)
     private String bio;
 
@@ -37,6 +43,15 @@ public class UserAccount {
         }
         if (createdAt == null) {
             createdAt = Instant.now();
+        }
+        if (role == null || role.isBlank()) {
+            role = "USER";
+        }
+        if (bio == null) {
+            bio = "";
+        }
+        if (profileImageUrl == null) {
+            profileImageUrl = "";
         }
     }
 
@@ -68,6 +83,22 @@ public class UserAccount {
         this.passwordHash = passwordHash;
     }
 
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getProfileImageUrl() {
+        return profileImageUrl;
+    }
+
+    public void setProfileImageUrl(String profileImageUrl) {
+        this.profileImageUrl = profileImageUrl;
+    }
+
     public String getBio() {
         return bio;
     }
@@ -80,4 +111,3 @@ public class UserAccount {
         return createdAt;
     }
 }
-

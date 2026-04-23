@@ -13,7 +13,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/v1/auth")
+@RequestMapping({"/api/auth", "/api/v1/auth"})
 public class AuthController {
 
     private final UserProfileService userProfileService;
@@ -33,4 +33,3 @@ public class AuthController {
         return userProfileService.login(request);
     }
 }
-
