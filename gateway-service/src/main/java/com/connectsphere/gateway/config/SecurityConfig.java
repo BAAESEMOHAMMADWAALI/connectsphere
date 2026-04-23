@@ -22,7 +22,7 @@ public class SecurityConfig {
         return http
                 .csrf(ServerHttpSecurity.CsrfSpec::disable)
                 .authorizeExchange(exchanges -> exchanges
-                        .pathMatchers("/actuator/health", "/api/v1/auth/**").permitAll()
+                        .pathMatchers("/actuator/health", "/api/test", "/api/v1/auth/**").permitAll()
                         .anyExchange().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> {
                 }))
@@ -38,4 +38,3 @@ public class SecurityConfig {
                 .build();
     }
 }
-
