@@ -1,4 +1,4 @@
-# ConnectSphere
+# connectshaper
 
 ConnectSphere is a Spring Boot microservices backend scaffold for an Instagram-style social platform. This Day 1 baseline sets up the service boundaries, build system, infrastructure definitions, and starter APIs so implementation can continue service-by-service without reworking the repo layout.
 
@@ -70,4 +70,3 @@ connectsphere/
 
 - Architecture: [docs/architecture.md](C:\Users\olede\Documents\ConnectShaper\connectsphere\docs\architecture.md)
 - Tooling status: [docs/tooling-status.md](C:\Users\olede\Documents\ConnectShaper\connectsphere\docs\tooling-status.md)
-
