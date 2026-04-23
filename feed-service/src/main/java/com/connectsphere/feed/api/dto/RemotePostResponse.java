@@ -8,10 +8,10 @@ public record RemotePostResponse(
         String authorUserId,
         String caption,
         String mediaUrl,
+        String imageUrl,
         Instant createdAt,
         long likeCount,
         long commentCount,
         List<Object> comments
 ) {
 }
-

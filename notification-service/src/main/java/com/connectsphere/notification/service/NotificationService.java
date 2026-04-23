@@ -8,6 +8,7 @@ import java.util.UUID;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 import org.springframework.web.server.ResponseStatusException;
 
 @Service
@@ -41,6 +42,15 @@ public class NotificationService {
     }
 
     @Transactional
+    public NotificationResponse markAsRead(String notificationId) {
+        NotificationEntity notificationEntity = notificationRepository.findById(parseUuid(notificationId, "notification id"))
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Notification not found"));
+
+        notificationEntity.setRead(true);
+        return mapToResponse(notificationEntity);
+    }
+
+    @Transactional
     public void saveNotification(UUID recipientUserId, String type, String message, String payloadJson) {
         NotificationEntity notificationEntity = new NotificationEntity();
         notificationEntity.setRecipientUserId(recipientUserId);
@@ -64,6 +74,9 @@ public class NotificationService {
     }
 
     private UUID parseUuid(String value, String fieldName) {
+        if (!StringUtils.hasText(value)) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Missing " + fieldName);
+        }
         try {
             return UUID.fromString(value);
         } catch (IllegalArgumentException exception) {
@@ -71,4 +84,3 @@ public class NotificationService {
         }
     }
 }
-
