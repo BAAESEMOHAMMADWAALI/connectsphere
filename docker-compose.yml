@@ -39,11 +39,12 @@ services:
     environment:
       KAFKA_NODE_ID: 1
       KAFKA_PROCESS_ROLES: broker,controller
-      KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+      KAFKA_LISTENERS: PLAINTEXT://:9092,PLAINTEXT_INTERNAL://:29092,CONTROLLER://:9093
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092,PLAINTEXT_INTERNAL://kafka:29092
       KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_INTERNAL:PLAINTEXT
       KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT_INTERNAL
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: 1
       KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: 1
@@ -55,7 +56,130 @@ services:
       timeout: 10s
       retries: 10
 
+  user-service:
+    build:
+      context: ./user-service
+    container_name: connectsphere-user-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: user_db
+      DB_USERNAME: connectsphere
+      DB_PASSWORD: connectsphere
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      SECURITY_JWT_SECRET: connectsphere-demo-secret-key-2026-change-me
+    ports:
+      - "8081:8081"
+
+  post-service:
+    build:
+      context: ./post-service
+    container_name: connectsphere-post-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: post_db
+      DB_USERNAME: connectsphere
+      DB_PASSWORD: connectsphere
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8082:8082"
+
+  follow-service:
+    build:
+      context: ./follow-service
+    container_name: connectsphere-follow-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: follow_db
+      DB_USERNAME: connectsphere
+      DB_PASSWORD: connectsphere
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8083:8083"
+
+  feed-service:
+    build:
+      context: ./feed-service
+    container_name: connectsphere-feed-service
+    depends_on:
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+      post-service:
+        condition: service_started
+      follow-service:
+        condition: service_started
+    environment:
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+      POST_SERVICE_BASE_URL: http://post-service:8082
+      FOLLOW_SERVICE_BASE_URL: http://follow-service:8083
+    ports:
+      - "8084:8084"
+
+  notification-service:
+    build:
+      context: ./notification-service
+    container_name: connectsphere-notification-service
+    depends_on:
+      postgres:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: notification_db
+      DB_USERNAME: connectsphere
+      DB_PASSWORD: connectsphere
+      KAFKA_BOOTSTRAP_SERVERS: kafka:29092
+    ports:
+      - "8085:8085"
+
+  gateway-service:
+    build:
+      context: ./gateway-service
+    container_name: connectsphere-gateway-service
+    depends_on:
+      user-service:
+        condition: service_started
+      post-service:
+        condition: service_started
+      follow-service:
+        condition: service_started
+      feed-service:
+        condition: service_started
+      notification-service:
+        condition: service_started
+    environment:
+      SECURITY_JWT_SECRET: connectsphere-demo-secret-key-2026-change-me
+      USER_SERVICE_BASE_URL: http://user-service:8081
+      POST_SERVICE_BASE_URL: http://post-service:8082
+      FOLLOW_SERVICE_BASE_URL: http://follow-service:8083
+      FEED_SERVICE_BASE_URL: http://feed-service:8084
+      NOTIFICATION_SERVICE_BASE_URL: http://notification-service:8085
+    ports:
+      - "8080:8080"
+
 volumes:
   postgres-data:
   redis-data:
-

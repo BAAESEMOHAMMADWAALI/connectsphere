@@ -1,36 +1,38 @@
 server:
-  port: 8080
+  port: ${SERVER_PORT:8080}
 
 spring:
   application:
     name: gateway-service
   cloud:
     gateway:
-      routes:
-        - id: auth-route
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/v1/auth/**
-        - id: user-route
-          uri: http://localhost:8081
-          predicates:
-            - Path=/api/v1/users/**
-        - id: post-route
-          uri: http://localhost:8082
-          predicates:
-            - Path=/api/v1/posts/**
-        - id: follow-route
-          uri: http://localhost:8083
-          predicates:
-            - Path=/api/v1/follows/**
-        - id: feed-route
-          uri: http://localhost:8084
-          predicates:
-            - Path=/api/v1/feed/**
-        - id: notification-route
-          uri: http://localhost:8085
-          predicates:
-            - Path=/api/v1/notifications/**
+      server:
+        webflux:
+          routes:
+            - id: auth-route
+              uri: ${USER_SERVICE_BASE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/auth/**
+            - id: user-route
+              uri: ${USER_SERVICE_BASE_URL:http://localhost:8081}
+              predicates:
+                - Path=/api/v1/users/**
+            - id: post-route
+              uri: ${POST_SERVICE_BASE_URL:http://localhost:8082}
+              predicates:
+                - Path=/api/v1/posts/**
+            - id: follow-route
+              uri: ${FOLLOW_SERVICE_BASE_URL:http://localhost:8083}
+              predicates:
+                - Path=/api/v1/follows/**
+            - id: feed-route
+              uri: ${FEED_SERVICE_BASE_URL:http://localhost:8084}
+              predicates:
+                - Path=/api/v1/feed/**
+            - id: notification-route
+              uri: ${NOTIFICATION_SERVICE_BASE_URL:http://localhost:8085}
+              predicates:
+                - Path=/api/v1/notifications/**
 
 management:
   endpoints:
@@ -40,5 +42,4 @@ management:
 
 security:
   jwt:
-    secret: connectsphere-demo-secret-key-2026-change-me
-
+    secret: ${SECURITY_JWT_SECRET:connectsphere-demo-secret-key-2026-change-me}

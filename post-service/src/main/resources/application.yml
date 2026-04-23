@@ -1,13 +1,13 @@
 server:
-  port: 8082
+  port: ${SERVER_PORT:8082}
 
 spring:
   application:
     name: post-service
   datasource:
-    url: jdbc:postgresql://localhost:5432/post_db
-    username: connectsphere
-    password: connectsphere
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:post_db}
+    username: ${DB_USERNAME:connectsphere}
+    password: ${DB_PASSWORD:connectsphere}
   jpa:
     hibernate:
       ddl-auto: update
@@ -16,7 +16,7 @@ spring:
       hibernate:
         format_sql: true
   kafka:
-    bootstrap-servers: localhost:9092
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
     producer:
       key-serializer: org.apache.kafka.common.serialization.StringSerializer
       value-serializer: org.apache.kafka.common.serialization.StringSerializer
@@ -26,4 +26,3 @@ management:
     web:
       exposure:
         include: health,info
-
